@@ -59,7 +59,7 @@ impl CompactSize {
         match prefix {
             0xFD => {
                 if bytes.len() == 3 {
-                   return Err(BitcoinError::InsufficientBytes);
+                    return Err(BitcoinError::InsufficientBytes);
                 } else {
                     // skip the prefix and take what follows?
                     let val = u16::from_le_bytes([bytes[1], bytes[2]]);
@@ -68,7 +68,7 @@ impl CompactSize {
             }
             0xFE => {
                 if bytes.len() < 5 {
-                   return Err(BitcoinError::InsufficientBytes);
+                    return Err(BitcoinError::InsufficientBytes);
                 } else {
                     let mut buf = [0u8; 4];
                     buf.copy_from_slice(&bytes[1..5]);
@@ -87,9 +87,7 @@ impl CompactSize {
                 Ok((CompactSize::new(val), 9))
             }
 
-            _ => {
-                Ok((CompactSize::new(prefix as u64), 1))
-            }
+            _ => Ok((CompactSize::new(prefix as u64), 1)),
         }
     }
 }
@@ -127,16 +125,31 @@ pub struct OutPoint {
 impl OutPoint {
     pub fn new(txid: [u8; 32], vout: u32) -> Self {
         // Create an OutPoint from raw txid bytes and output index
-        Self { txid: Txid(txid), vout }
+        Self {txid: Txid(txid), vout}
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        // TODO: Serialize as: txid (32 bytes) + vout (4 bytes, little-endian)
+        // Serialize as: txid (32 bytes) + vout (4 bytes - 32bits, little-endian)
+        let mut bytes = Vec::with_capacity(36);
+        bytes.extend_from_slice(&self.txid.0);
+        bytes.extend_from_slice(&self.vout.to_le_bytes());
+        bytes
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
-        // TODO: Deserialize 36 bytes: txid[0..32], vout[32..36]
+        // Deserialize 36 bytes: txid[0..32], vout[32..36]
         // Return error if insufficient bytes
+        if bytes.len() < 36 {
+            return Err(BitcoinError::InsufficientBytes);
+        }
+        let mut txid_bytes = [0u8; 32];
+        txid_bytes.copy_from_slice(&bytes[0..32]);
+
+        let mut vout_bytes = [0u8; 4];
+        vout_bytes.copy_from_slice(&bytes[32..36]);
+        let vout = u32::from_le_bytes(vout_bytes);
+
+        Ok((OutPoint {txid: Txid(txid_bytes),vout}, 36))
     }
 }
 
