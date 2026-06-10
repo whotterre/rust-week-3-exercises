@@ -15,11 +15,13 @@ pub enum BitcoinError {
 
 impl CompactSize {
     pub fn new(value: u64) -> Self {
-        // TODO: Construct a CompactSize from a u64 value
+        // Construct a CompactSize from a u64 value
+        Self {value}
     }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
+    pub fn to_bytes(&self) -> Vec<u8> { 
         // TODO: Encode according to Bitcoin's CompactSize format:
+
         // [0x00–0xFC] => 1 byte
         // [0xFDxxxx] => 0xFD + u16 (2 bytes)
         // [0xFExxxxxxxx] => 0xFE + u32 (4 bytes)
