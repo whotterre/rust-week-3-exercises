@@ -102,7 +102,9 @@ impl Serialize for Txid {
     where
         S: serde::Serializer,
     {
-        // TODO: Serialize as a hex-encoded string (32 bytes => 64 hex characters)
+        // Serialize as a hex-encoded string (32 bytes => 64 hex characters)
+        let hex_str = hex::encode(self.0);
+        serializer.serialize_str(&hex_str)
     }
 }
 
