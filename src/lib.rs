@@ -126,7 +126,8 @@ pub struct OutPoint {
 
 impl OutPoint {
     pub fn new(txid: [u8; 32], vout: u32) -> Self {
-        // TODO: Create an OutPoint from raw txid bytes and output index
+        // Create an OutPoint from raw txid bytes and output index
+        Self { txid: Txid(txid), vout }
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
