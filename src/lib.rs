@@ -16,16 +16,34 @@ pub enum BitcoinError {
 impl CompactSize {
     pub fn new(value: u64) -> Self {
         // Construct a CompactSize from a u64 value
-        Self {value}
+        Self { value }
     }
 
-    pub fn to_bytes(&self) -> Vec<u8> { 
-        // TODO: Encode according to Bitcoin's CompactSize format:
-
+    pub fn to_bytes(&self) -> Vec<u8> {
+        // Encode according to Bitcoin's CompactSize format:
         // [0x00–0xFC] => 1 byte
         // [0xFDxxxx] => 0xFD + u16 (2 bytes)
         // [0xFExxxxxxxx] => 0xFE + u32 (4 bytes)
         // [0xFFxxxxxxxxxxxxxxxx] => 0xFF + u64 (8 bytes)
+        let mut bytes = Vec::new();
+        match self.value {
+            0..=0xFC => { // 0 - 252
+                bytes.push(self.value as u8);
+            }
+            0xFD..=0xFFFF => {
+                bytes.push(0xFD); // 253 - 65,535
+                bytes.extend_from_slice(&(self.value as u16).to_le_bytes());
+            }
+            0x10000..=0xFFFFFFFF => {
+                bytes.push(0xFE); // 65,536 - (2 ^ 32) - 1
+                bytes.extend_from_slice(&(self.value as u32).to_le_bytes());
+            }
+            _ => {
+                bytes.push(0xFF); // otherwise, 
+                bytes.extend_from_slice(&self.value.to_le_bytes());
+            }
+        }
+        bytes
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
