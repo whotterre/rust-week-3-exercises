@@ -27,7 +27,8 @@ impl CompactSize {
         // [0xFFxxxxxxxxxxxxxxxx] => 0xFF + u64 (8 bytes)
         let mut bytes = Vec::new();
         match self.value {
-            0..=0xFC => { // 0 - 252
+            0..=0xFC => {
+                // 0 - 252
                 bytes.push(self.value as u8);
             }
             0xFD..=0xFFFF => {
@@ -47,9 +48,49 @@ impl CompactSize {
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
-        // TODO: Decode CompactSize, returning value and number of bytes consumed.
+        // Decode CompactSize, returning value and number of bytes consumed.
         // First check if bytes is empty.
         // Check that enough bytes are available based on prefix.
+        if bytes.is_empty() {
+            return Err(BitcoinError::InsufficientBytes);
+        }
+
+        let prefix = bytes[0];
+        match prefix {
+            0xFD => {
+                if bytes.len() == 3 {
+                   return Err(BitcoinError::InsufficientBytes);
+                } else {
+                    // skip the prefix and take what follows?
+                    let val = u16::from_le_bytes([bytes[1], bytes[2]]);
+                    Ok((CompactSize::new(val as u64), 3))
+                }
+            }
+            0xFE => {
+                if bytes.len() < 5 {
+                   return Err(BitcoinError::InsufficientBytes);
+                } else {
+                    let mut buf = [0u8; 4];
+                    buf.copy_from_slice(&bytes[1..5]);
+                    let val = u32::from_le_bytes(buf);
+                    Ok((CompactSize::new(val as u64), 5))
+                }
+            }
+
+            0xFF => {
+                if bytes.len() < 9 {
+                    return Err(BitcoinError::InsufficientBytes);
+                }
+                let mut buf = [0u8; 8];
+                buf.copy_from_slice(&bytes[1..9]);
+                let val = u64::from_le_bytes(buf);
+                Ok((CompactSize::new(val), 9))
+            }
+
+            _ => {
+                Ok((CompactSize::new(prefix as u64), 1))
+            }
+        }
     }
 }
 
