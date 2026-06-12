@@ -113,6 +113,21 @@ impl<'de> Deserialize<'de> for Txid {
     {
         // TODO: Parse hex string into 32-byte array
         // Use `hex::decode`, validate length = 32
+        let hex_string = String::deserialize(deserializer)?;
+        
+        let bytes = hex::decode(&hex_string)
+            .map_err(|e| serde::de::Error::custom(format!("Invalid hex: {}", e)))?;
+        
+        if bytes.len() != 32 {
+            return Err(serde::de::Error::custom(
+                format!("Invalid Txid length: expected 32 bytes, got {}", bytes.len())
+            ));
+        }
+        
+        let array: [u8; 32] = bytes.try_into()
+            .map_err(|_| serde::de::Error::custom("Failed to convert to 32-byte array"))?;
+        
+        Ok(Txid(array))
     }
 }
 
@@ -160,11 +175,12 @@ pub struct Script {
 
 impl Script {
     pub fn new(bytes: Vec<u8>) -> Self {
-        // TODO: Simple constructor
+        // Simple constructor
+        Self {bytes}
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        // TODO: Prefix with CompactSize (length), then raw bytes
+        // Prefix with CompactSize (length), then raw bytes
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
