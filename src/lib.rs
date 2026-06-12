@@ -114,19 +114,21 @@ impl<'de> Deserialize<'de> for Txid {
         // TODO: Parse hex string into 32-byte array
         // Use `hex::decode`, validate length = 32
         let hex_string = String::deserialize(deserializer)?;
-        
+
         let bytes = hex::decode(&hex_string)
             .map_err(|e| serde::de::Error::custom(format!("Invalid hex: {}", e)))?;
-        
+
         if bytes.len() != 32 {
-            return Err(serde::de::Error::custom(
-                format!("Invalid Txid length: expected 32 bytes, got {}", bytes.len())
-            ));
+            return Err(serde::de::Error::custom(format!(
+                "Invalid Txid length: expected 32 bytes, got {}",
+                bytes.len()
+            )));
         }
-        
-        let array: [u8; 32] = bytes.try_into()
+
+        let array: [u8; 32] = bytes
+            .try_into()
             .map_err(|_| serde::de::Error::custom("Failed to convert to 32-byte array"))?;
-        
+
         Ok(Txid(array))
     }
 }
@@ -140,7 +142,10 @@ pub struct OutPoint {
 impl OutPoint {
     pub fn new(txid: [u8; 32], vout: u32) -> Self {
         // Create an OutPoint from raw txid bytes and output index
-        Self {txid: Txid(txid), vout}
+        Self {
+            txid: Txid(txid),
+            vout,
+        }
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -164,7 +169,13 @@ impl OutPoint {
         vout_bytes.copy_from_slice(&bytes[32..36]);
         let vout = u32::from_le_bytes(vout_bytes);
 
-        Ok((OutPoint {txid: Txid(txid_bytes),vout}, 36))
+        Ok((
+            OutPoint {
+                txid: Txid(txid_bytes),
+                vout,
+            },
+            36,
+        ))
     }
 }
 
@@ -176,16 +187,62 @@ pub struct Script {
 impl Script {
     pub fn new(bytes: Vec<u8>) -> Self {
         // Simple constructor
-        Self {bytes}
+        Self { bytes }
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
         // Prefix with CompactSize (length), then raw bytes
+        return vec![];
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
         // TODO: Parse CompactSize prefix, then read that many bytes
         // Return error if not enough bytes
+        if bytes.is_empty() {
+            return Err(BitcoinError::InsufficientBytes);
+        }
+
+        let (script_len, prefix_size) = match bytes[0] {
+            0xfd => {
+                if bytes.len() < 3 {
+                    return Err(BitcoinError::InsufficientBytes);
+                }
+                let len = u16::from_le_bytes([bytes[1], bytes[2]]) as usize;
+                (len, 3)
+            }
+            0xfe => {
+                if bytes.len() < 5 {
+                    return Err(BitcoinError::InsufficientBytes);
+                }
+                let len = u32::from_le_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]) as usize;
+                (len, 5)
+            }
+            0xff => {
+                if bytes.len() < 9 {
+                    return Err(BitcoinError::InsufficientBytes);
+                }
+                let len = u64::from_le_bytes([
+                    bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8],
+                ]) as usize;
+                (len, 9)
+            }
+            n if n < 0xfd => {
+                (n as usize, 1)
+            }
+            _ => return Err(BitcoinError::InsufficientBytes),
+        };
+
+        let total_bytes = prefix_size + script_len;
+
+        if bytes.len() < total_bytes {
+            return Err(BitcoinError::InsufficientBytes);
+        }
+
+        let script = Script {
+            bytes: bytes[prefix_size..total_bytes].to_vec(),
+        };
+
+        Ok((script, total_bytes))
     }
 }
 
