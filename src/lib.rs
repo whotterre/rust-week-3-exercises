@@ -322,7 +322,11 @@ pub struct BitcoinTransaction {
 impl BitcoinTransaction {
     pub fn new(version: u32, inputs: Vec<TransactionInput>, lock_time: u32) -> Self {
         // Construct a transaction from parts
-        BitcoinTransaction { version, inputs, lock_time }
+        BitcoinTransaction {
+            version,
+            inputs,
+            lock_time,
+        }
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -335,7 +339,7 @@ impl BitcoinTransaction {
         let version_bytes = self.version.to_le_bytes().to_vec();
         let c_size_bytes = CompactSize::new(self.inputs.len() as u64).to_bytes();
         let mut inputs_bytes: Vec<u8> = Vec::new();
-        
+
         for input in &self.inputs {
             let transaction_bytes = input.to_bytes();
             inputs_bytes.extend_from_slice(&transaction_bytes);
@@ -346,20 +350,55 @@ impl BitcoinTransaction {
         res.extend_from_slice(&version_bytes);
         res.extend_from_slice(&c_size_bytes);
         res.extend_from_slice(&lock_time_bytes);
-        
+
         res
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
-        // TODO: Read version, CompactSize for input count
+        // Read version, CompactSize for input count
         // Parse inputs one by one
         // Read final 4 bytes for lock_time
+        let mut offset = 0;
+
+        if bytes.len() < 4 {
+            return Err(BitcoinError::InsufficientBytes);
+        }
+        let version_bytes: [u8; 4] = bytes[offset..offset + 4].try_into().unwrap();
+        let version = u32::from_le_bytes(version_bytes);
+        offset += 4;
+
+        let (input_count, compact_consumed) = CompactSize::from_bytes(&bytes[offset..])?;
+        offset += compact_consumed;
+        let input_count = input_count.value as usize;
+
+        let mut inputs = Vec::with_capacity(input_count);
+        for _ in 0..input_count {
+            let (input, input_consumed) = TransactionInput::from_bytes(&bytes[offset..])?;
+            inputs.push(input);
+            offset += input_consumed;
+        }
+
+        if bytes.len() < offset + 4 { // if the inputs vector is 0, then
+            return Err(BitcoinError::InsufficientBytes);
+        }
+        let lock_time_bytes: [u8; 4] = bytes[offset..offset + 4].try_into().unwrap();
+        let lock_time = u32::from_le_bytes(lock_time_bytes);
+        offset += 4;
+
+        Ok((
+            BitcoinTransaction {
+                version,
+                inputs,
+                lock_time,
+            },
+            offset,
+        ))
     }
 }
-
 impl fmt::Display for BitcoinTransaction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // TODO: Format a user-friendly string showing version, inputs, lock_time
         // Display scriptSig length and bytes, and previous output info
+        write!(f, "(")
     }
 }
