@@ -58,13 +58,11 @@ impl CompactSize {
         let prefix = bytes[0];
         match prefix {
             0xFD => {
-                if bytes.len() == 3 {
+                if bytes.len() < 3 {
                     return Err(BitcoinError::InsufficientBytes);
-                } else {
-                    // skip the prefix and take what follows?
-                    let val = u16::from_le_bytes([bytes[1], bytes[2]]);
-                    Ok((CompactSize::new(val as u64), 3))
                 }
+                let val = u16::from_le_bytes([bytes[1], bytes[2]]);
+                Ok((CompactSize::new(val as u64), 3))
             }
             0xFE => {
                 if bytes.len() < 5 {
