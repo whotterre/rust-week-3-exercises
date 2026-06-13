@@ -190,14 +190,14 @@ impl Script {
         Self { bytes }
     }
 
-  pub fn to_bytes(&self) -> Vec<u8> {
-    // Prefix with CompactSize (length), then raw bytes
-    let mut result = Vec::new();
-    let size_prefix = CompactSize::new(self.bytes.len() as u64);
-    result.extend_from_slice(&size_prefix.to_bytes());
-    result.extend_from_slice(&self.bytes);
-    result
-}
+    pub fn to_bytes(&self) -> Vec<u8> {
+        // Prefix with CompactSize (length), then raw bytes
+        let mut result = Vec::new();
+        let size_prefix = CompactSize::new(self.bytes.len() as u64);
+        result.extend_from_slice(&size_prefix.to_bytes());
+        result.extend_from_slice(&self.bytes);
+        result
+    }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
         // Parse CompactSize prefix, then read that many bytes
@@ -230,9 +230,7 @@ impl Script {
                 ]) as usize;
                 (len, 9)
             }
-            n if n < 0xfd => {
-                (n as usize, 1)
-            }
+            n if n < 0xfd => (n as usize, 1),
             _ => return Err(BitcoinError::InsufficientBytes),
         };
 
@@ -268,11 +266,26 @@ pub struct TransactionInput {
 impl TransactionInput {
     pub fn new(previous_output: OutPoint, script_sig: Script, sequence: u32) -> Self {
         // Basic constructor
-        TransactionInput { previous_output, script_sig, sequence }
+        TransactionInput {
+            previous_output,
+            script_sig,
+            sequence,
+        }
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        // TODO: Serialize: OutPoint + Script (with CompactSize) + sequence (4 bytes LE)
+        // Serialize: OutPoint + Script (with CompactSize) + sequence (4 bytes LE)
+        let serialized_output = self.previous_output.to_bytes();
+        let script_sig = CompactSize::new(self.script_sig.len() as u64).to_bytes();
+        let sequence = u32::to_le_bytes(self.sequence).to_vec();
+
+        let mut concatenated_bytes = Vec::new();
+        concatenated_bytes.extend_from_slice(&serialized_output);
+        concatenated_bytes.extend_from_slice(&script_sig);
+        concatenated_bytes.extend_from_slice(&self.script_sig.bytes);
+        concatenated_bytes.extend_from_slice(&sequence);
+
+        concatenated_bytes
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
