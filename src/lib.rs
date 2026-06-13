@@ -345,7 +345,7 @@ impl BitcoinTransaction {
             inputs_bytes.extend_from_slice(&transaction_bytes);
         }
 
-        let lock_time_bytes = self.lock_time.to_be_bytes().to_vec();
+        let lock_time_bytes = self.lock_time.to_le_bytes().to_vec();
 
         res.extend_from_slice(&version_bytes);
         res.extend_from_slice(&c_size_bytes);
