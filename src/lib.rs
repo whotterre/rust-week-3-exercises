@@ -378,7 +378,8 @@ impl BitcoinTransaction {
             offset += input_consumed;
         }
 
-        if bytes.len() < offset + 4 { // if the inputs vector is 0, then
+        if bytes.len() < offset + 4 {
+            // if the inputs vector is 0, then
             return Err(BitcoinError::InsufficientBytes);
         }
         let lock_time_bytes: [u8; 4] = bytes[offset..offset + 4].try_into().unwrap();
@@ -397,8 +398,14 @@ impl BitcoinTransaction {
 }
 impl fmt::Display for BitcoinTransaction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // TODO: Format a user-friendly string showing version, inputs, lock_time
+        // Format a user-friendly string showing version, inputs, lock_time
         // Display scriptSig length and bytes, and previous output info
-        write!(f, "(")
+        write!(f, "Version: {}\n", self.version)?;
+
+        for input in &self.inputs {
+            write!(f, "Previous Output Vout: {}\n", input.previous_output.vout)?;
+        }
+
+        write!(f, "Lock Time: {}", self.lock_time)
     }
 }
