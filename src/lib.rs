@@ -200,7 +200,7 @@ impl Script {
 }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
-        // TODO: Parse CompactSize prefix, then read that many bytes
+        // Parse CompactSize prefix, then read that many bytes
         // Return error if not enough bytes
         if bytes.is_empty() {
             return Err(BitcoinError::InsufficientBytes);
@@ -253,7 +253,8 @@ impl Script {
 impl Deref for Script {
     type Target = Vec<u8>;
     fn deref(&self) -> &Self::Target {
-        // TODO: Allow &Script to be used as &[u8]
+        // Allow &Script to be used as &[u8]
+        &self.bytes
     }
 }
 
@@ -266,7 +267,8 @@ pub struct TransactionInput {
 
 impl TransactionInput {
     pub fn new(previous_output: OutPoint, script_sig: Script, sequence: u32) -> Self {
-        // TODO: Basic constructor
+        // Basic constructor
+        TransactionInput { previous_output, script_sig, sequence }
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
