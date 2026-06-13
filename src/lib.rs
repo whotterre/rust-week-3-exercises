@@ -321,15 +321,33 @@ pub struct BitcoinTransaction {
 
 impl BitcoinTransaction {
     pub fn new(version: u32, inputs: Vec<TransactionInput>, lock_time: u32) -> Self {
-        // TODO: Construct a transaction from parts
+        // Construct a transaction from parts
+        BitcoinTransaction { version, inputs, lock_time }
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        // TODO: Format:
+        // Format:
         // - version (4 bytes LE)
         // - CompactSize (number of inputs)
         // - each input serialized
         // - lock_time (4 bytes LE)
+        let mut res: Vec<u8> = Vec::new();
+        let version_bytes = self.version.to_le_bytes().to_vec();
+        let c_size_bytes = CompactSize::new(self.inputs.len() as u64).to_bytes();
+        let mut inputs_bytes: Vec<u8> = Vec::new();
+        
+        for input in &self.inputs {
+            let transaction_bytes = input.to_bytes();
+            inputs_bytes.extend_from_slice(&transaction_bytes);
+        }
+
+        let lock_time_bytes = self.lock_time.to_be_bytes().to_vec();
+
+        res.extend_from_slice(&version_bytes);
+        res.extend_from_slice(&c_size_bytes);
+        res.extend_from_slice(&lock_time_bytes);
+        
+        res
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
