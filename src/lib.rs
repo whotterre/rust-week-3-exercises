@@ -289,10 +289,26 @@ impl TransactionInput {
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
-        // TODO: Deserialize in order:
+        // Deserialize in order:
         // - OutPoint (36 bytes)
         // - Script (with CompactSize)
         // - Sequence (4 bytes)
+
+        let (outpoint, outpoint_consumed) = OutPoint::from_bytes(bytes)?;
+        let (script, script_consumed) = Script::from_bytes(&bytes[outpoint_consumed..])?;
+        let sequence_start = outpoint_consumed + script_consumed;
+        let sequence_bytes: [u8; 4] = bytes[sequence_start..sequence_start + 4]
+            .try_into()
+            .map_err(|_| BitcoinError::InsufficientBytes)?;
+        let total_consumed = outpoint_consumed + script_consumed + 4;
+        Ok((
+            TransactionInput {
+                previous_output: outpoint,
+                script_sig: script,
+                sequence: u32::from_le_bytes(sequence_bytes),
+            },
+            total_consumed,
+        ))
     }
 }
 
