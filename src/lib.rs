@@ -190,10 +190,14 @@ impl Script {
         Self { bytes }
     }
 
-    pub fn to_bytes(&self) -> Vec<u8> {
-        // Prefix with CompactSize (length), then raw bytes
-        return vec![];
-    }
+  pub fn to_bytes(&self) -> Vec<u8> {
+    // Prefix with CompactSize (length), then raw bytes
+    let mut result = Vec::new();
+    let size_prefix = CompactSize::new(self.bytes.len() as u64);
+    result.extend_from_slice(&size_prefix.to_bytes());
+    result.extend_from_slice(&self.bytes);
+    result
+}
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
         // TODO: Parse CompactSize prefix, then read that many bytes
