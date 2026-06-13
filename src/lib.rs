@@ -349,6 +349,7 @@ impl BitcoinTransaction {
 
         res.extend_from_slice(&version_bytes);
         res.extend_from_slice(&c_size_bytes);
+        res.extend_from_slice(&inputs_bytes);
         res.extend_from_slice(&lock_time_bytes);
 
         res
